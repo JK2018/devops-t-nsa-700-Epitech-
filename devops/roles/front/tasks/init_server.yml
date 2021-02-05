@@ -1,0 +1,71 @@
+- name: Install git
+  become: true
+  apt:
+    name: git
+    state: latest
+
+- name: Install Nginx
+  become: true
+  apt:
+    name: nginx
+    state: latest
+  notify: Restart Nginx
+
+- name: Add Laravel config template
+  become: true
+  template:
+    src: templates/angular.conf.j2
+    dest: /etc/nginx/sites-available/front.conf
+  notify: Restart Nginx
+
+- name: Enable laravel config template
+  become: true
+  file:
+    src: /etc/nginx/sites-available/front.conf
+    dest: /etc/nginx/sites-enabled/front.conf
+    state: link
+  notify: Restart Nginx
+
+- name: Add enabled Nginx site to /etc/hosts
+  become: true
+  lineinfile:
+    dest: /etc/hosts
+    regexp: "{{ front_server_name }}"
+    line: "127.0.0.1 {{ front_server_name }}"
+
+- name: install node
+  apt:
+    name: nodejs
+
+- name: install npm
+  apt:
+    name: npm
+
+- name: Clone repository
+  git:
+    repo: 'git@gitlab.com:OGPayet/devops_frontend.git'
+    dest: "{{ angular_clone_dir }}"
+    force: yes
+  become: no
+
+- name: Update repositories cache and install "package.json" package
+  npm:
+    path: "{{ angular_clone_dir }}"
+  become: no
+
+- name: Update environment.ts
+  template:
+    src: templates/environment.ts.j2
+    dest: "{{ angular_clone_dir }}/src/environments/environment.ts"
+  become: no
+  notify: Restart Nginx
+
+- name: Build project
+  shell: chdir="{{ angular_clone_dir }}" npm run build
+  become: no
+
+- name: Move dist folder in nginx
+  shell: ln -s "{{ angular_builded_dir }}" "{{ angular_root_dir }}"
+  notify: Restart Nginx
+
+

@@ -1,0 +1,5 @@
+- name: Include php var
+  include_vars:
+    file: php7.yml
+- include_tasks: init_server.yml
+- include_tasks: deploy.yml

@@ -1,0 +1,24 @@
+- name: "Pull changes"
+  git:
+    repo: 'git@gitlab.com:OGPayet/devops_frontend.git'
+    dest: "{{ angular_clone_dir }}"
+    accept_hostkey: yes
+    version: master
+    force: yes
+  become: no
+
+- name: Update environment.ts
+  template:
+    src: templates/environment.ts.j2
+    dest: "{{ angular_clone_dir }}/src/environments/environment.ts"
+  become: no
+  notify: Restart Nginx
+
+- name: Update repositories cache and install "package.json" package
+  npm:
+    path: "{{ angular_clone_dir }}"
+  become: no
+
+- name: Build project
+  shell: chdir="{{ angular_clone_dir }}" npm run build
+  become: no

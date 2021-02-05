@@ -1,0 +1,165 @@
+- name: Update APT package manager
+  become: true
+  apt:
+    update_cache: yes
+
+- name: Upgrade installed packages
+  become: true
+  apt:
+    upgrade: safe
+
+- name: Install cowsay
+  become: true
+  apt:
+    name: cowsay
+
+- name: Install utilities
+  become: true
+  apt:
+    name: ['zip', 'unzip']
+
+- name: Install git
+  become: true
+  apt:
+    name: git
+    state: latest
+
+## TO MOVE INTO A ROLE ##
+
+- name: Install Nginx and Mysql
+  become: true
+  apt:
+    name: ['nginx', 'mariadb-server']
+    state: latest
+  notify: Restart Nginx
+
+- name: Add Laravel config template
+  become: true
+  template:
+    src: templates/laravel.conf.j2
+    dest: /etc/nginx/sites-available/back.conf
+  notify: Restart Nginx
+
+- name: Enable laravel config template
+  become: true
+  file:
+    src: /etc/nginx/sites-available/back.conf
+    dest: /etc/nginx/sites-enabled/back.conf
+    state: link
+  notify: Restart Nginx
+
+- name: Add enabled Nginx site to /etc/hosts
+  become: true
+  lineinfile:
+    dest: /etc/hosts
+    regexp: "{{ back_server_name }}"
+    line: "127.0.0.1 {{ back_server_name }}"
+
+- name: Install dependency for ondrej ppa
+  apt:
+    name: ['apt-transport-https', 'lsb-release', 'ca-certificates']
+
+- name: Get gpg
+  shell: wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+
+- name: Echo deb file
+  shell: echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" > /etc/apt/sources.list.d/php.list
+
+- name: Update again
+  apt:
+    update_cache: yes
+
+- name: Install PHP Packages
+  become: true
+  apt:
+    name: ['php7.1-cli', 'php7.1-curl', 'php7.1-fpm', 'php7.1-intl', 'php7.1-mysql', 'php7.1-xml', 'php7.1-mbstring']
+    state: latest
+  notify: Restart PHP-FPM
+
+- name: Set date.timezone for CLI
+  become: true
+  lineinfile:
+    dest: /etc/php/7.1/cli/php.ini
+    regexp: "date.timezone ="
+    line: "date.timezone = UTC"
+
+- name: Set date.timezone for FPM
+  become: true
+  lineinfile:
+    dest: /etc/php/7.1/fpm/php.ini
+    regexp: "date.timezone ="
+    line: "date.timezone = UTC"
+  notify: Restart PHP-FPM
+
+- name: Create project directory and set its permissions
+  become: true
+  file:
+    path: "{{ laravel_root_dir }}"
+    state: directory
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    recurse: yes
+
+- name: Clone repository
+  git:
+    repo: 'git@gitlab.com:rfouyer/devops_backend.git'
+    dest: "{{ laravel_root_dir }}"
+  become: no
+
+## ENV
+
+- name: Copy .env.example to .env
+  shell: cp "{{ laravel_root_dir }}"/.env.example "{{ laravel_root_dir }}"/.env
+
+- name: Replace db host
+  become: true
+  lineinfile:
+    dest: '{{ laravel_root_dir }}/.env'
+    regexp: "DB_HOST="
+    line: "DB_HOST={{ hostvars['db-1'].ansible_host }}"
+
+- name: Replace db port
+  become: true
+  lineinfile:
+    dest: '{{ laravel_root_dir }}/.env'
+    regexp: "DB_PORT="
+    line: 'DB_PORT={{ DB_PORT }}'
+
+- name: Replace db database
+  become: true
+  lineinfile:
+    dest: '{{ laravel_root_dir }}/.env'
+    regexp: "DB_DATABASE="
+    line: 'DB_DATABASE={{ DB_DATABASE }}'
+
+- name: Replace db username
+  become: true
+  lineinfile:
+    dest: '{{ laravel_root_dir }}/.env'
+    regexp: "DB_USERNAME="
+    line: 'DB_USERNAME={{ DB_USERNAME }}'
+
+- name: Replace db password
+  become: true
+  lineinfile:
+    dest: '{{ laravel_root_dir }}/.env'
+    regexp: "DB_PASSWORD="
+    line: 'DB_PASSWORD={{ DB_PASSWORD }}'
+
+## Fix cloning issue
+
+- name: Fix storage directory permissions
+  shell: chmod 0777 "{{ laravel_root_dir }}"/storage -R
+
+- name: Download composer
+  script: scripts/install_composer.sh
+
+- name: Move Composer Globally
+  become: true
+  command: mv composer.phar /usr/local/bin/composer
+
+- name: Set permissions on Composer
+  become: true
+  file:
+    path: /usr/local/bin/composer
+    mode: "a+x"

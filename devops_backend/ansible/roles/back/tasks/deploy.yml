@@ -1,0 +1,27 @@
+- name: Fix storage directory permissions
+  shell: chmod 0777 "{{ laravel_root_dir }}"/storage -R
+
+- name: "Pull changes"
+  git:
+    repo: 'git@gitlab.com:rfouyer/devops_backend.git'
+    dest: "{{ laravel_root_dir }}"
+    accept_hostkey: yes
+    version: master
+    force: yes
+  become: no
+
+- name: "Install composer dependencies"
+  command: chdir="{{ laravel_root_dir }}" php /usr/local/bin/composer install --no-scripts --no-dev
+  become: no
+
+- name: "Cache the config"
+  command: chdir="{{ laravel_root_dir }}" php artisan config:cache
+  become: no
+
+- name: "Clear the view cache"
+  command: chdir="{{ laravel_root_dir }}" php artisan view:clear
+  become: no
+
+- name: "Run migration"
+  command: chdir="{{ laravel_root_dir }}" php artisan migrate --force
+  become: no

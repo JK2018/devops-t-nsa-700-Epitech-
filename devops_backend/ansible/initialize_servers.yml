@@ -1,0 +1,23 @@
+- name: Database
+  hosts: db
+  user: debian
+  become: yes
+  become_method: sudo
+  roles:
+    - {role: 'db', tags: 'db'}
+
+- name: Back
+  hosts: back
+  user: debian
+  become: yes
+  become_method: sudo
+  roles:
+    - {role: 'back', tags: 'back'}
+  
+- name: Front
+  hosts: front
+  user: debian
+  become: yes
+  become_method: sudo
+  roles:
+    - {role: 'front', tags: 'front'}

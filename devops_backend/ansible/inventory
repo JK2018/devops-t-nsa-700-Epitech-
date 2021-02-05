@@ -1,0 +1,8 @@
+[db]
+db-1 ansible_host=192.168.90.129 ansible_sudo_pass='{{ machine_password }}' ansible_python_interpreter=/usr/bin/python3
+
+[back]
+back-1 ansible_host=4.tcp.ngrok.io ansible_port=19319 ansible_sudo_pass='{{ machine_password }}'
+
+[front]
+front-1 ansible_host=192.168.0.133 ansible_sudo_pass='{{ machine_password }}'

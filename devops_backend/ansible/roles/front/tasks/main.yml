@@ -1,0 +1,4 @@
+- name: Include angular var
+  include_vars:
+    file: angular.yml
+- include_tasks: init_server.yml

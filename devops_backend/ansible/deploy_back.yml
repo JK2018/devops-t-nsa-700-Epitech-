@@ -1,0 +1,10 @@
+- name: Back
+  hosts: back
+  user: debian
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Include php var
+      include_vars:
+        file: roles/back/tasks/php7.yml
+    - include_tasks: roles/back/tasks/deploy.yml

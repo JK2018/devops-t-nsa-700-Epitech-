@@ -1,0 +1,17 @@
+- name: Front
+  hosts: front
+  user: debian
+  become: yes
+  become_method: sudo
+  tasks:
+    - name: Include angular var
+      include_vars:
+        file: roles/front/tasks/angular.yml
+    - include_tasks: roles/front/tasks/deploy.yml
+
+  handlers:
+    - name: Restart Nginx
+      become: true
+      service:
+        name: nginx
+        state: restarted
